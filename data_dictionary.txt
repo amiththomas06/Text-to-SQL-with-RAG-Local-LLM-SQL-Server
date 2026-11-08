@@ -1,0 +1,32 @@
+DATABASE OVERVIEW
+Database: TextToSQLDemo on SQL Server Express. Use T-SQL syntax (TOP, DATEPART, DATEADD, GETDATE), not MySQL or PostgreSQL syntax such as LIMIT. All tables are in the dbo schema. Currency is GBP (£).
+
+TABLE: dbo.Customers
+One row per customer. Columns: CustomerID (primary key), CustomerName, Region (London, South West, South East, Midlands, North), SignupDate (date the customer account was created).
+
+TABLE: dbo.Products
+One row per product. Columns: ProductID (primary key), ProductName, Category (Office Supplies, Electronics, Furniture, Breakroom, Cleaning), ListPrice (current catalogue price).
+
+TABLE: dbo.Orders
+One row per order. Columns: OrderID (primary key), CustomerID (links to dbo.Customers), OrderDate, Status. Status is one of Completed, Cancelled, Refunded.
+
+TABLE: dbo.OrderItems
+One row per product line on an order. Columns: OrderItemID (primary key), OrderID (links to dbo.Orders), ProductID (links to dbo.Products), Quantity, UnitPrice (price actually charged), Discount (fraction, e.g. 0.10 means 10% off). There is no revenue column; revenue must be calculated.
+
+METRIC: REVENUE
+Revenue = SUM(oi.Quantity * oi.UnitPrice * (1 - oi.Discount)) from dbo.OrderItems joined to dbo.Orders on OrderID. Only orders with Status = 'Completed' count towards revenue. Cancelled and Refunded orders are always excluded. Use UnitPrice from OrderItems, not ListPrice from Products.
+
+BUSINESS RULE: PREMIUM CUSTOMERS
+A premium customer is a customer whose lifetime revenue (all Completed orders, any date) is greater than 10,000. Calculate it with GROUP BY o.CustomerID HAVING SUM(oi.Quantity * oi.UnitPrice * (1 - oi.Discount)) > 10000. Premium status is based on lifetime spend, not spend within the period being analysed.
+
+BUSINESS RULE: QUARTERS
+Quarters are calendar quarters: Q1 = Jan-Mar, Q2 = Apr-Jun, Q3 = Jul-Sep, Q4 = Oct-Dec. "Last quarter" means the most recent fully completed calendar quarter before today's date (GETDATE()). "Previous quarter" means the quarter before that. Use YEAR(o.OrderDate) and DATEPART(QUARTER, o.OrderDate) to group by quarter.
+
+T-SQL TIP: START OF LAST QUARTER
+Start of the current quarter: DATEADD(QUARTER, DATEDIFF(QUARTER, 0, GETDATE()), 0). Start of last quarter: DATEADD(QUARTER, DATEDIFF(QUARTER, 0, GETDATE()) - 1, 0). Start of the previous quarter: DATEADD(QUARTER, DATEDIFF(QUARTER, 0, GETDATE()) - 2, 0). Filter with OrderDate >= start AND OrderDate < next start.
+
+METRIC: AVERAGE ORDER VALUE
+Average order value = total revenue divided by COUNT(DISTINCT o.OrderID), Completed orders only.
+
+METRIC: QUARTER-ON-QUARTER GROWTH
+Growth % = (revenue this quarter - revenue previous quarter) / revenue previous quarter * 100.
